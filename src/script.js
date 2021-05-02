@@ -45,7 +45,7 @@ gui.addColor(properties, 'backgroundColour').onFinishChange(() => {
 
 // Setup
 const sizes = {
-    width: 800,
+    width: 600,
     height: 600
 }
 
@@ -101,7 +101,7 @@ const generateXRange = () => {
 const createWindTrail = () => {
     const trailLength = Math.random() * properties.windTrailLength;
 
-    const boxGeometry = new THREE.BoxGeometry(properties.windTrailSize, properties.windTrailSize, trailLength, 32, 32, 32);
+    const boxGeometry = new THREE.BoxGeometry(properties.windTrailSize, properties.windTrailSize, trailLength);
     const boxMaterial = new THREE.MeshBasicMaterial({
         color: properties.windTrailColour,
         transparent: true,
@@ -151,34 +151,8 @@ const tick = () => {
     const deltaTime = elapsedTime - previousTime;
     previousTime = elapsedTime;
 
-    // // Move wind trails
-    // windTrails.forEach(trail => {
-    //     // Position
-    //     if (trail.position.z > 5) {
-    //         trail.position.z = -5;
-    //     } else {
-    //         trail.position.z += deltaTime * properties.windTrailSpeed;
-    //     }
-
-    //     let trailScale;
-    //     if (trail.position.z <= 0) {
-    //         trailScale = mapRange(-5, 0, 0, 1, trail.position.z);
-    //     } else {
-    //         trailScale = mapRange(0, 5, 1, 0, trail.position.z);
-    //     }
-
-    //     // trail.scale.set(
-    //     //     trailScale,
-    //     //     trailScale,
-    //     //     trail.scale.z
-    //     // );
-
-    //     trail.material.opacity = trailScale - 0.3;
-    // });
-
-    for (let i = 0; i < windTrails.length; i++) {
-        const trail = windTrails[i];
-        
+    // Move wind trails
+    windTrails.forEach(trail => {
         if (trail.position.z > 5) {
             trail.position.z = -5;
         } else {
@@ -192,19 +166,9 @@ const tick = () => {
             trailScale = mapRange(0, 5, 1, 0, trail.position.z);
         }
 
-        trail.material.opacity = trailScale - 0.3;
+        trail.material.opacity = trailScale - 0.1;
+    });
 
-        const positionArray = trail.geometry.getAttribute('position');
-
-        let yIndex = 1;
-        while (yIndex <= positionArray.count) {
-            const x = trail.geometry.attributes.position.array[yIndex-1];
-            trail.geometry.attributes.position.array[yIndex] = Math.sin(elapsedTime + x);
-            yIndex += 3;
-        }
-        trail.geometry.attributes.position.needsUpdate = true;
-    }
-    
     // Animations
     if (mixer) {
         mixer.timeScale = 1;
