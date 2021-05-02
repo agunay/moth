@@ -38,8 +38,8 @@ gui.add (properties, 'windTrailCount').min(10).max(100).step(1).name('windTrailC
 gui.add (properties, 'windTrailSpeed').min(1).max(10).step(0.01).name('windTrailSpeed');
 gui.add(properties, 'windTrailSize').min(0.005).max(0.5).step(0.001).name('windTrailSize').onFinishChange(() => {initiateWinds(); });
 gui.add(properties, 'windTrailLength').min(0.1).max(5).step(0.01).name('windTrailLength').onFinishChange(() => {initiateWinds(); });
-gui.addColor(properties, 'windTrailColour').onFinishChange(() => {initiateWinds(); });
-gui.addColor(properties, 'backgroundColour').onFinishChange(() => {
+gui.addColor(properties, 'windTrailColour').onChange(() => {initiateWinds(); });
+gui.addColor(properties, 'backgroundColour').onChange(() => {
     renderer.setClearColor(new THREE.Color(properties.backgroundColour));
 });
 
