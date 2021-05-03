@@ -1,11 +1,3 @@
-import './style.css';
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-// import * as dat from 'dat.gui'
-
-const TWEEN = require('@tweenjs/tween.js');
-
 // Util functions
 
 // Map a value s in range [a1, a2] to range [b1, b2]
@@ -57,7 +49,7 @@ const sizes = {
     height: window.innerHeight
 };
 
-const canvas = document.querySelector('canvas.webgl');
+const canvas = document.querySelector('.webgl');
 
 const scene = new THREE.Scene();
 
@@ -84,7 +76,7 @@ renderer.setSize(sizes.width, sizes.height);
 renderer.setClearColor(new THREE.Color(properties.backgroundColour));
 renderer.render(scene, camera);
 
-const controls = new OrbitControls(camera, canvas);
+const controls = new THREE.OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.minDistance = 1;
 controls.maxDistance = 10;
@@ -93,9 +85,9 @@ controls.update();
 // GLTF Import
 let model, defaultMixer, tumbleMixer;
 
-const gltfLoader = new GLTFLoader();
+const gltfLoader = new THREE.GLTFLoader();
 
-gltfLoader.load('models/moth_11.gltf', (gltf) => {
+gltfLoader.load('moth_11.gltf', (gltf) => {
     console.log(gltf);
 
     gltf.scene.position.set(0, 0, -3);
