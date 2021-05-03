@@ -67,8 +67,6 @@ let model, defaultMixer, tumbleMixer;
 const gltfLoader = new THREE.GLTFLoader();
 
 gltfLoader.load('moth_11.gltf', (gltf) => {
-    console.log(gltf);
-
     gltf.scene.position.set(0, 0, -3);
 
     const animations = gltf.animations;
