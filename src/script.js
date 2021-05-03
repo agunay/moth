@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as dat from 'dat.gui'
 
-const TWEEN = require('@tweenjs/tween.js')
+const TWEEN = require('@tweenjs/tween.js');
 
 // Util functions
 
@@ -50,74 +50,39 @@ gui.addColor(properties, 'backgroundColour').onChange(() => {
 });
 
 const currentQuaternion = new THREE.Quaternion();
-let tween;
-let tumbling = false, correcting = false;
-window.addEventListener('dblclick', () => {
-    // tumbling = !tumbling;
-    if (!tumbling) {
-        tumbling = true;
-        correcting = false;
-    } else if (tumbling) {
-        tumbling = false;
-        correcting = true;
-
-        currentQuaternion.copy(model.scene.children[0].quaternion);
-
-        tween = new TWEEN.Tween(currentQuaternion);
-        tween.to({ _x: 0, _y: 0, _z: 0, _w: 0 }, 500);
-        tween.start();
-
-        tween.onUpdate((obj) => {
-            // console.log(obj);
-            model.scene.children[0].quaternion.set(
-                currentQuaternion._x,
-                currentQuaternion._y,
-                currentQuaternion._z,
-                currentQuaternion._w
-            );
-        });
-        
-        tween.onComplete(() => {
-            console.log('tween completed');
-            correcting = false;
-        });        
-    }
-});
-
-if (tween) {
-    // tween.onUpdate((obj) => {
-    //     console.log('tween update');
-    //     console.log(obj);
-    // });
-    
-    tween.onComplete(() => {
-        console.log('tween completed');
-    });
-}
 
 // Setup
 const sizes = {
-    width: 600,
-    height: 600
-}
+    width: window.innerWidth,
+    height: window.innerHeight
+};
 
 const canvas = document.querySelector('canvas.webgl');
 
 const scene = new THREE.Scene();
 
-const axesHelper = new THREE.AxesHelper( 5 );
-scene.add( axesHelper );
+window.addEventListener('resize', () => {
+    sizes.width = window.innerWidth;
+    sizes.height = window.innerHeight;
+    camera.aspect = sizes.width / sizes.height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(sizes.width, sizes.height)
+});
 
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
-camera.position.z = 5;
+// const axesHelper = new THREE.AxesHelper( 5 );
+// scene.add( axesHelper );
+
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
+camera.position.set(4, 3, 4);
+camera.lookAt(new THREE.Vector3(0,0,0));
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas
-})
-renderer.setSize(sizes.width, sizes.height)
+});
+renderer.setSize(sizes.width, sizes.height);
 renderer.setClearColor(new THREE.Color(properties.backgroundColour));
-renderer.render(scene, camera)
+renderer.render(scene, camera);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
@@ -126,19 +91,26 @@ controls.maxDistance = 10;
 controls.update();
 
 // GLTF Import
-let model, mixer;
+let model, defaultMixer, tumbleMixer;
 
 const gltfLoader = new GLTFLoader();
 
-gltfLoader.load('models/moth_7.gltf', (gltf) => {
-    // console.log(gltf);
-    gltf.scene.position.set(0, 0, 1.5);
+gltfLoader.load('models/moth_11.gltf', (gltf) => {
+    console.log(gltf);
+
+    gltf.scene.position.set(0, 0, -3);
 
     const animations = gltf.animations;
     if ( animations && animations.length) {
-        mixer = new THREE.AnimationMixer(gltf.scene);
+        defaultMixer = new THREE.AnimationMixer(gltf.scene);
+        tumbleMixer = new THREE.AnimationMixer(gltf.scene);
+        
         for (let i = 0; i < animations.length; i++) {
-            mixer.clipAction(animations[i]).play();
+            if (animations[i].name === 'Key.002Action' || animations[i].name === 'CNTRL_Action') {
+                tumbleMixer.clipAction(animations[i]).play();
+            } else {
+                defaultMixer.clipAction(animations[i]).play();
+            }
         }
     }
     
@@ -196,6 +168,36 @@ initiateWinds();
 const ambientLight = new THREE.AmbientLight(0xffffff);
 scene.add(ambientLight);
 
+// Tumbling animation
+let tween;
+let tumbling = false, correcting = false;
+window.addEventListener('dblclick', () => {
+    if (!tumbling) {
+        tumbling = true;
+        correcting = false;
+    } else if (tumbling) {
+        tumbling = false;
+        correcting = true;
+
+        tween = new TWEEN.Tween(currentQuaternion);
+        tween.to({ _x: 0, _y: 0, _z: 0, _w: 1 }, 500);
+        tween.start();
+
+        tween.onUpdate((obj) => {
+            model.scene.children[0].quaternion.set(
+                currentQuaternion._x,
+                currentQuaternion._y,
+                currentQuaternion._z,
+                currentQuaternion._w
+            );
+        });
+        
+        tween.onComplete(() => {
+            correcting = false;
+        });        
+    }
+});
+
 // Frame animation
 const clock = new THREE.Clock();
 let previousTime = 0
@@ -223,33 +225,29 @@ const tick = () => {
         trail.material.opacity = trailScale;
     });
 
-    if (mixer) {
+    if (model) {
         currentQuaternion.copy(model.scene.children[0].quaternion);
-        
+
         // Animations
         if (!tumbling) {
             if (correcting) {
                 TWEEN.update();
             } else {
-                mixer.timeScale = 1;
-                mixer.update(deltaTime);   
+                tumbleMixer.timeScale = 0;
+                defaultMixer.timeScale = 1;
+                defaultMixer.update(deltaTime);   
             }              
         }
 
         // Tumble
         else if (tumbling) {
-            mixer.timeScale = 0;
-            model.scene.children[0].rotation.set(
-                (Math.PI * 2 * elapsedTime * properties.windTrailSpeed * 0.25) / Math.PI,
-                (Math.PI * 2 * elapsedTime * properties.windTrailSpeed * 0.25) / Math.PI,
-                (Math.PI * 2 * elapsedTime * properties.windTrailSpeed * 0.25) / Math.PI,
-            );
+            defaultMixer.timeScale = 0;
+            tumbleMixer.timeScale = 1;
+            tumbleMixer.update(deltaTime);
         }   
     }
 
-    // Orbit controls
     controls.update();
-
     renderer.render(scene, camera);
     window.requestAnimationFrame(tick);
 }
