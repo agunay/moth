@@ -4,6 +4,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as dat from 'dat.gui'
 
+const TWEEN = require('@tweenjs/tween.js')
+
 // Util functions
 
 // Map a value s in range [a1, a2] to range [b1, b2]
@@ -18,16 +20,18 @@ let windTrails = [];
 const gui = new dat.GUI();
 
 const properties = {
-    xSpreadGap: 1,
+    xSpreadGap: 0.3,
     xSpread: 5,
     ySpread: 5,
-    zSpread: 5,
-    windTrailCount: 50,
-    windTrailSpeed: 3,
-    windTrailSize: 0.05,
-    windTrailLength: 1,
-    windTrailColour: "#f25d23",
-    backgroundColour: "#fff9db"
+    zSpread: 10,
+    windTrailCount: 42,
+    windTrailSpeed: 10,
+    windTrailSize: 0.036,
+    windTrailLength: 5,
+    windTrailColour: "#f9a368",
+    windTrailStartLoc: -4,
+    windTrailEndLoc: 4,
+    backgroundColour: "#e1e2dc"
 };
 
 gui.add (properties, 'xSpreadGap').min(0).max(2).step(0.1).name('xSpreadGap').onFinishChange(() => {initiateWinds(); });
@@ -38,10 +42,58 @@ gui.add (properties, 'windTrailCount').min(10).max(100).step(1).name('windTrailC
 gui.add (properties, 'windTrailSpeed').min(1).max(10).step(0.01).name('windTrailSpeed');
 gui.add(properties, 'windTrailSize').min(0.005).max(0.5).step(0.001).name('windTrailSize').onFinishChange(() => {initiateWinds(); });
 gui.add(properties, 'windTrailLength').min(0.1).max(5).step(0.01).name('windTrailLength').onFinishChange(() => {initiateWinds(); });
+gui.add(properties, 'windTrailStartLoc').min(-6).max(-2).step(0.1).name('windTrailStartLoc');
+gui.add(properties, 'windTrailEndLoc').min(2).max(6).step(0.1).name('windTrailEndLoc');
 gui.addColor(properties, 'windTrailColour').onChange(() => {initiateWinds(); });
 gui.addColor(properties, 'backgroundColour').onChange(() => {
     renderer.setClearColor(new THREE.Color(properties.backgroundColour));
 });
+
+const currentQuaternion = new THREE.Quaternion();
+let tween;
+let tumbling = false, correcting = false;
+window.addEventListener('dblclick', () => {
+    // tumbling = !tumbling;
+    if (!tumbling) {
+        tumbling = true;
+        correcting = false;
+    } else if (tumbling) {
+        tumbling = false;
+        correcting = true;
+
+        currentQuaternion.copy(model.scene.children[0].quaternion);
+
+        tween = new TWEEN.Tween(currentQuaternion);
+        tween.to({ _x: 0, _y: 0, _z: 0, _w: 0 }, 500);
+        tween.start();
+
+        tween.onUpdate((obj) => {
+            // console.log(obj);
+            model.scene.children[0].quaternion.set(
+                currentQuaternion._x,
+                currentQuaternion._y,
+                currentQuaternion._z,
+                currentQuaternion._w
+            );
+        });
+        
+        tween.onComplete(() => {
+            console.log('tween completed');
+            correcting = false;
+        });        
+    }
+});
+
+if (tween) {
+    // tween.onUpdate((obj) => {
+    //     console.log('tween update');
+    //     console.log(obj);
+    // });
+    
+    tween.onComplete(() => {
+        console.log('tween completed');
+    });
+}
 
 // Setup
 const sizes = {
@@ -53,11 +105,11 @@ const canvas = document.querySelector('canvas.webgl');
 
 const scene = new THREE.Scene();
 
-// const axesHelper = new THREE.AxesHelper( 5 );
-// scene.add( axesHelper );
+const axesHelper = new THREE.AxesHelper( 5 );
+scene.add( axesHelper );
 
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
-camera.position.z = 3;
+camera.position.z = 5;
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({
@@ -75,10 +127,12 @@ controls.update();
 
 // GLTF Import
 let model, mixer;
+
 const gltfLoader = new GLTFLoader();
 
 gltfLoader.load('models/moth_7.gltf', (gltf) => {
-    scene.add(gltf.scene);
+    // console.log(gltf);
+    gltf.scene.position.set(0, 0, 1.5);
 
     const animations = gltf.animations;
     if ( animations && animations.length) {
@@ -89,6 +143,8 @@ gltfLoader.load('models/moth_7.gltf', (gltf) => {
     }
     
     model = gltf;
+    model.scene.children[0].position.set(0, 0, 3);
+    scene.add(model.scene);
 });
 
 // Wind
@@ -135,14 +191,12 @@ const clearWinds = () => {
 }
 
 initiateWinds();
-console.log(windTrails);
 
 // Lights
 const ambientLight = new THREE.AmbientLight(0xffffff);
 scene.add(ambientLight);
 
 // Frame animation
-
 const clock = new THREE.Clock();
 let previousTime = 0
 
@@ -153,8 +207,8 @@ const tick = () => {
 
     // Move wind trails
     windTrails.forEach(trail => {
-        if (trail.position.z > 5) {
-            trail.position.z = -5;
+        if (trail.position.z > properties.windTrailEndLoc) {
+            trail.position.z = properties.windTrailStartLoc;
         } else {
             trail.position.z += deltaTime * properties.windTrailSpeed;
         }
@@ -166,13 +220,31 @@ const tick = () => {
             trailScale = mapRange(0, 5, 1, 0, trail.position.z);
         }
 
-        trail.material.opacity = trailScale - 0.1;
+        trail.material.opacity = trailScale;
     });
 
-    // Animations
     if (mixer) {
-        mixer.timeScale = 1;
-        mixer.update(deltaTime);
+        currentQuaternion.copy(model.scene.children[0].quaternion);
+        
+        // Animations
+        if (!tumbling) {
+            if (correcting) {
+                TWEEN.update();
+            } else {
+                mixer.timeScale = 1;
+                mixer.update(deltaTime);   
+            }              
+        }
+
+        // Tumble
+        else if (tumbling) {
+            mixer.timeScale = 0;
+            model.scene.children[0].rotation.set(
+                (Math.PI * 2 * elapsedTime * properties.windTrailSpeed * 0.25) / Math.PI,
+                (Math.PI * 2 * elapsedTime * properties.windTrailSpeed * 0.25) / Math.PI,
+                (Math.PI * 2 * elapsedTime * properties.windTrailSpeed * 0.25) / Math.PI,
+            );
+        }   
     }
 
     // Orbit controls
