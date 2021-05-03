@@ -8,9 +8,6 @@ const mapRange = (a1, a2, b1, b2, s) => {
 // Global variables
 let windTrails = [];
 
-// Debugbar
-// const gui = new dat.GUI();
-
 const properties = {
     xSpreadGap: 0.3,
     xSpread: 5,
@@ -25,21 +22,6 @@ const properties = {
     windTrailEndLoc: 4,
     backgroundColour: "#e1e2dc"
 };
-
-// gui.add (properties, 'xSpreadGap').min(0).max(2).step(0.1).name('xSpreadGap').onFinishChange(() => {initiateWinds(); });
-// gui.add (properties, 'xSpread').min(1).max(10).step(1).name('xSpread').onFinishChange(() => {initiateWinds(); });
-// gui.add (properties, 'ySpread').min(1).max(10).step(1).name('ySpread').onFinishChange(() => {initiateWinds(); });
-// gui.add (properties, 'zSpread').min(1).max(10).step(1).name('zSpread').onFinishChange(() => {initiateWinds(); });
-// gui.add (properties, 'windTrailCount').min(10).max(100).step(1).name('windTrailCount').onFinishChange(() => {initiateWinds(); });
-// gui.add (properties, 'windTrailSpeed').min(1).max(10).step(0.01).name('windTrailSpeed');
-// gui.add(properties, 'windTrailSize').min(0.005).max(0.5).step(0.001).name('windTrailSize').onFinishChange(() => {initiateWinds(); });
-// gui.add(properties, 'windTrailLength').min(0.1).max(5).step(0.01).name('windTrailLength').onFinishChange(() => {initiateWinds(); });
-// gui.add(properties, 'windTrailStartLoc').min(-6).max(-2).step(0.1).name('windTrailStartLoc');
-// gui.add(properties, 'windTrailEndLoc').min(2).max(6).step(0.1).name('windTrailEndLoc');
-// gui.addColor(properties, 'windTrailColour').onChange(() => {initiateWinds(); });
-// gui.addColor(properties, 'backgroundColour').onChange(() => {
-//     renderer.setClearColor(new THREE.Color(properties.backgroundColour));
-// });
 
 const currentQuaternion = new THREE.Quaternion();
 
@@ -60,9 +42,6 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(sizes.width, sizes.height)
 });
-
-// const axesHelper = new THREE.AxesHelper( 5 );
-// scene.add( axesHelper );
 
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
 camera.position.set(4, 3, 4);
